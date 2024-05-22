@@ -1,0 +1,33 @@
+services:
+  backend:
+    restart: always
+    image: "toolbox.blazor.todo.backend:latest"
+    build: 
+      context: .
+      dockerfile: backend/Dockerfile
+      tags: 
+        - "toolbox.blazor.todo.backend:latest"
+        - "toolbox.blazor.todo.backend:0.0.0"
+    ports:
+      - 5000:5000
+    networks:
+      - todo
+  frontend:
+    restart: always
+    image: "toolbox.blazor.todo.frontend:latest"
+    build: 
+      context: .
+      dockerfile: frontend/Dockerfile
+      tags:
+        - "toolbox.blazor.todo.frontend:latest"
+        - "toolbox.blazor.todo.frontend:0.0.0"
+    ports:
+      - 80:80
+    networks:
+      - todo
+    depends_on: 
+      - backend
+    environment:
+      - API_URL=http://backend:5001
+networks:
+  todo:
