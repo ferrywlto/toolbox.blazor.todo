@@ -1,12 +1,21 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
-COPY *.csproj .
-RUN dotnet restore
-COPY . .
-RUN dotnet publish -c Release -o out -r linux-musl-x64
+COPY shared/shared.csproj shared/
+RUN dotnet restore shared/shared.csproj
 
+COPY frontend/frontend.csproj frontend/
+RUN dotnet restore frontend/frontend.csproj
+
+COPY shared shared
+COPY frontend frontend
+RUN dotnet publish frontend/frontend.csproj -c Release -o out -r linux-musl-arm64
+
+# This is a working example on how to inject environment variable into nginx container
+# It have to pass env variable during runtime, just before container start generate new nginx.conf 
+# and overwrite the default one with variables replaced by passed environment variables
 FROM nginx:alpine AS deploy
-RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d/
 COPY --from=build /app/out /usr/share/nginx/html
-ENTRYPOINT ["nginx", "-g", "daemon off;"]
+RUN rm /etc/nginx/conf.d/default.conf
+COPY frontend/nginx.conf /etc/nginx/nginx.conf.template
+# The cat /etc/nginx/nginx.conf is for debugging purpose, ensuring the variables are replaces successfully
+CMD /bin/sh -c "envsubst '\$API_URL' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && cat /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
