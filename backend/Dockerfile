@@ -1,11 +1,14 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-RUN apt update
-RUN apt install -y clang zlib1g-dev
 WORKDIR /app
-COPY *.csproj .
-RUN dotnet restore
+COPY shared/shared.csproj shared/
+RUN dotnet restore shared/shared.csproj
+
+COPY backend/backend.csproj backend/
+RUN dotnet restore backend/backend.csproj
+
 COPY . .
-RUN dotnet publish -c Release -o out -r linux-musl-arm64
+RUN cd backend
+RUN dotnet publish -c Release -o out -r linux-musl-arm64 
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS deploy
 WORKDIR /app
