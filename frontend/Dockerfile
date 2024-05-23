@@ -15,7 +15,6 @@ RUN dotnet publish frontend/frontend.csproj -c Release -o out -r linux-musl-arm6
 # and overwrite the default one with variables replaced by passed environment variables
 FROM nginx:alpine AS deploy
 COPY --from=build /app/out /usr/share/nginx/html
-RUN rm /etc/nginx/conf.d/default.conf
 COPY frontend/nginx.conf /etc/nginx/nginx.conf.template
-# The cat /etc/nginx/nginx.conf is for debugging purpose, ensuring the variables are replaces successfully
+# The cat /etc/nginx/nginx.conf is for debugging purpose, ensuring the variables are replaced successfully
 CMD /bin/sh -c "envsubst '\$API_URL' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && cat /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
