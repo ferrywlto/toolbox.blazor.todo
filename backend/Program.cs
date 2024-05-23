@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using Shared;
-var builder = WebApplication.CreateSlimBuilder(args);
 
+var builder = WebApplication.CreateSlimBuilder(args);
+builder.Services.AddCors(c => c.AddDefaultPolicy(p => p.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin()));
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
@@ -24,6 +24,7 @@ todosApi.MapGet("/{id}", (int id) =>
         ? Results.Ok(todo)
         : Results.NotFound());
 
+app.UseCors();
 app.Run();
 
 [JsonSerializable(typeof(TodoItem[]))]

@@ -1,4 +1,4 @@
-﻿
+﻿@inject HttpClient http
 @page "/counter"
 
 <PageTitle>Counter</PageTitle>
@@ -18,10 +18,16 @@
         currentCount++;
     }
 
-    private void CallBackend()
+    private async void CallBackend()
     {
         var client = new HttpClient();
-        var todos = client.GetFromJsonAsync<TodoItem[]>($"{AppState.Configuration.BackendUrl}/todos");
-        Console.WriteLine(todos);
+        var url = $"{AppState.Configuration.BackendUrl}/todos";
+        try {
+
+            var todos = await http.GetFromJsonAsync<TodoItem[]>(url);
+            Console.WriteLine(todos);
+        } catch (Exception e) {
+            Console.WriteLine(e);
+        }
     }
 }
