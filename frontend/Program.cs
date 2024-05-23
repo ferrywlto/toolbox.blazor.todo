@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using System.Net.Http.Json;
-using Toolbox.Blazor.Todo;
+using Toolbox.Blazor.Todo.Frontend;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -21,30 +21,19 @@ try {
 } catch (Exception e)
 {
     Console.WriteLine(e);
+    AppState.Configuration.BackendUrl = "http://localhost:5000";
 }
 
 // AppState.Configuration.BackendUrl = config!.BackendUrl;
  
 await app.RunAsync();
 
-namespace Toolbox.Blazor.Todo 
+public static class AppState
 {
-
-    public static class AppState
-    {
-        public static AppConfiguration Configuration { get; set; } = new();
-    }
-
-    public class AppConfiguration
-    {
-        public string BackendUrl { get; set; } = string.Empty;
-    }
-    // [JsonSerializable(typeof(TodoItem[]))]
-    // internal partial class AppJsonSerializerContext : JsonSerializerContext
-    // {
-
-    // }
+    public static AppConfiguration Configuration { get; set; } = new();
 }
 
-
-
+public class AppConfiguration
+{
+    public string BackendUrl { get; set; } = string.Empty;
+}
