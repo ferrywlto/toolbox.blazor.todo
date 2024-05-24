@@ -20,12 +20,12 @@
 
     private async void CallBackend()
     {
-        var client = new HttpClient();
-        var url = $"{AppState.Configuration.BackendUrl}/todos";
         try {
+            var todos = await http.GetFromJsonAsync<TodoItem[]>("/backend/todos");
+            foreach(var todo in todos!) {
 
-            var todos = await http.GetFromJsonAsync<TodoItem[]>(url);
-            Console.WriteLine(todos);
+                Console.WriteLine(todo.ToString());
+            }
         } catch (Exception e) {
             Console.WriteLine(e);
         }

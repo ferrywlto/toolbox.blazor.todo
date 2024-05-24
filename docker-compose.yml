@@ -28,6 +28,6 @@ services:
     depends_on: 
       - backend
     environment:
-      - API_URL=http://backend:5000
+      - API_URL=http://backend:5000/ # the "/" at the tail is required
 networks:
   todo:
