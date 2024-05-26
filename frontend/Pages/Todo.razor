@@ -1,0 +1,37 @@
+@inject IConfiguration config;
+@inject HttpClient http;
+@page "/todo"
+
+@foreach (var todo in todoItems!)
+{
+    <p>
+        @todo.Id<br>
+        @todo.Title<br>
+        @todo.DueBy<br>
+        @todo.IsComplete<br>
+    </p>
+}
+
+@code
+{
+    TodoItem[]? todoItems = [];
+
+    protected override async Task OnInitializedAsync() {
+        try {
+            var local_backend_url = config["local_backend_url"];
+
+            var url = string.IsNullOrEmpty(local_backend_url)
+                ? "/backend/todos"
+                : $"{local_backend_url}/todos";
+
+            todoItems = await http.GetFromJsonAsync<TodoItem[]>(url);
+            StateHasChanged();
+            foreach(var todo in todoItems!) 
+            {
+                Console.WriteLine(todo.ToString());
+            }
+        } catch (Exception e) {
+            Console.WriteLine(e);
+        }
+    }
+}
