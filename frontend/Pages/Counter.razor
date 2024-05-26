@@ -1,4 +1,5 @@
 ﻿@inject HttpClient http
+@inject IConfiguration config
 @page "/counter"
 
 <PageTitle>Counter</PageTitle>
@@ -21,9 +22,15 @@
     private async void CallBackend()
     {
         try {
-            var todos = await http.GetFromJsonAsync<TodoItem[]>("/backend/todos");
-            foreach(var todo in todos!) {
+            var local_backend_url = config["local_backend_url"];
+            
+            var url = string.IsNullOrEmpty(local_backend_url)
+                ? "/backend/todos"
+                : $"{local_backend_url}/todos";
 
+            var todos = await http.GetFromJsonAsync<TodoItem[]>(url);
+            foreach(var todo in todos!) 
+            {
                 Console.WriteLine(todo.ToString());
             }
         } catch (Exception e) {
