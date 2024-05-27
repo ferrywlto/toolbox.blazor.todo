@@ -1,37 +1,82 @@
 @inject IConfiguration config;
 @inject HttpClient http;
+@inject AppState state;
+
 @page "/todo"
 
-@foreach (var todo in todoItems!)
+<div>
+    <label for="txtTitle">Title:</label>
+    <input id="txtTitle" type="text" @bind-value="todoTitle">&nbsp;
+    <label for="dateDue">Due By:</label>
+    <input id="dateDue" type="date" @bind-value="dateDue">&nbsp;
+    <button type="button" @onclick="AddNewTodo">Add</button>
+</div>
+<hr>
+@foreach (var todo in state.todoItems)
 {
+    var checkboxId = $"isCompleteItem{todo.Id}";
     <p>
-        @todo.Id<br>
-        @todo.Title<br>
-        @todo.DueBy<br>
-        @todo.IsComplete<br>
+    <span>Id: @todo.Id</span>&nbsp;<span>Title: @todo.Title</span>&nbsp;
+    @if(todo.DueBy != null) {<span>Due By: @todo.DueBy</span>}&nbsp;
+    <span>Complete: @todo.IsComplete</span>&nbsp;
+    <input id="@checkboxId" type="checkbox" @onchange="eventArgs => UpdateComplete(todo.Id, (bool?)eventArgs?.Value)">
+    <button type="button" @onclick="() => DeleteTodo(todo.Id)">Delete</button>
     </p>
 }
 
 @code
 {
-    TodoItem[]? todoItems = [];
+    string todoTitle = "a";
+    DateOnly dateDue = DateOnly.FromDateTime(DateTime.Today);
 
-    protected override async Task OnInitializedAsync() {
-        try {
-            var local_backend_url = config["local_backend_url"];
+    void UpdateComplete(int id, bool? value)
+    {
+        var itemToUpdate = state.todoItems.FirstOrDefault(item => item.Id == id);
+        if(itemToUpdate != null)
+        {
+            state.todoItems.Remove(itemToUpdate);
+            var updatedItem = itemToUpdate with { IsComplete = value ?? false };
+            state.todoItems.Add(updatedItem);
+        }
+    }
+    void DeleteTodo(int id) {
+        var itemToDelete = state.todoItems.FirstOrDefault(item => item.Id == id);
+        if(itemToDelete != null)
+            state.todoItems.Remove(itemToDelete);
+        StateHasChanged();
+    }
+    void AddNewTodo() {
+        
+        var maxId = state.todoItems.Count == 0 ? 0 : state.todoItems.Max(item => item.Id);
+        var newItem = new TodoItem(maxId + 1, todoTitle, dateDue == default? null : dateDue);
+        state.todoItems.Add(newItem);
+        StateHasChanged();
+    }
 
-            var url = string.IsNullOrEmpty(local_backend_url)
+    protected override async Task OnInitializedAsync()
+    {
+        if (!state.Initialized)
+        {
+            try
+            {
+                var local_backend_url = config["local_backend_url"];
+
+                var url = string.IsNullOrEmpty(local_backend_url)
                 ? "/backend/todos"
                 : $"{local_backend_url}/todos";
 
-            todoItems = await http.GetFromJsonAsync<TodoItem[]>(url);
-            StateHasChanged();
-            foreach(var todo in todoItems!) 
-            {
-                Console.WriteLine(todo.ToString());
+                var result = await http.GetFromJsonAsync<List<TodoItem>>(url);
+                if (result != null)
+                {
+                    state.todoItems = result;
+                    state.Initialized = true;
+                    StateHasChanged();
+                }
             }
-        } catch (Exception e) {
-            Console.WriteLine(e);
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
     }
 }
