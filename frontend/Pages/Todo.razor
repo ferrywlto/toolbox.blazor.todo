@@ -2,27 +2,57 @@
 @inject HttpClient http;
 @inject AppState state;
 
-@page "/todo"
+@page "/"
 
 <div>
     <label for="txtTitle">Title:</label>
     <input id="txtTitle" type="text" @bind-value="todoTitle">&nbsp;
     <label for="dateDue">Due By:</label>
     <input id="dateDue" type="date" @bind-value="dateDue">&nbsp;
-    <button type="button" @onclick="AddNewTodo">Add</button>
+    <button type="button" @onclick="AddNewTodo" class="btn btn-primary">Add</button>
 </div>
 <hr>
-@foreach (var todo in state.todoItems)
-{
-    var checkboxId = $"isCompleteItem{todo.Id}";
-    <p>
-    <span>Id: @todo.Id</span>&nbsp;<span>Title: @todo.Title</span>&nbsp;
-    @if(todo.DueBy != null) {<span>Due By: @todo.DueBy</span>}&nbsp;
-    <span>Complete: @todo.IsComplete</span>&nbsp;
-    <input id="@checkboxId" type="checkbox" @onchange="eventArgs => UpdateComplete(todo.Id, (bool?)eventArgs?.Value)" checked="@todo.IsComplete">
-    <button type="button" @onclick="() => DeleteTodo(todo.Id)">Delete</button>
-    </p>
-}
+
+<div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Title</th>
+                <th>Due By</th>
+                <th>Complete</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var todo in state.todoItems)
+        {
+            var checkboxId = $"isCompleteItem{todo.Id}";
+
+            <tr>
+            <td>@todo.Id</td>
+            <td>@todo.Title</td>
+            <td>@if(todo.DueBy != null) {@todo.DueBy} else { <span>N/A</span> } </td>
+            <td>
+                <input id="@checkboxId" type="checkbox" @onchange="eventArgs => UpdateComplete(todo.Id, (bool?)eventArgs?.Value)" checked="@todo.IsComplete">
+            </td>
+            <td><button type="button" @onclick="() => DeleteTodo(todo.Id)" class="btn btn-danger">Delete</button></td>
+            </tr>
+        }
+        </tbody>    
+    </table>
+</div>
+
+<style>
+    .table-class {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    .table-class td, .table-class th {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+</style>
 
 @code
 {
