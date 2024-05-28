@@ -1,18 +1,15 @@
-@inject IConfiguration config;
-@inject HttpClient http;
-@inject AppState state;
-
-@page "/"
-
 <div>
-    <label for="txtTitle">Title:</label>
-    <input id="txtTitle" type="text" @bind-value="todoTitle">&nbsp;
-    <label for="dateDue">Due By:</label>
-    <input id="dateDue" type="date" @bind-value="dateDue">&nbsp;
-    <button type="button" @onclick="AddNewTodo" class="btn btn-primary">Add</button>
+    <EditForm Model="viewModel" @ref="editForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <label for="txtTitle">Title:</label>
+        <input id="txtTitle" type="text" @bind-value="viewModel.Title" @bind-value:event="oninput" />
+        <label for="dateDue">Due By:</label>
+        <input id="dateDue" type="date" @bind-value="viewModel.DueBy" />
+        <button type="button" @onclick="ValidateAndAdd" class="btn btn-primary">Add</button>
+    </EditForm>
 </div>
 <hr>
-
 <div>
     <table class="table table-striped">
         <thead>
@@ -25,7 +22,7 @@
             </tr>
         </thead>
         <tbody>
-        @foreach (var todo in state.todoItems)
+        @foreach (var todo in store.GetAll())
         {
             var checkboxId = $"isCompleteItem{todo.Id}";
 
@@ -34,9 +31,9 @@
             <td>@todo.Title</td>
             <td>@if(todo.DueBy != null) {@todo.DueBy} else { <span>N/A</span> } </td>
             <td>
-                <input id="@checkboxId" type="checkbox" @onchange="eventArgs => UpdateComplete(todo.Id, (bool?)eventArgs?.Value)" checked="@todo.IsComplete">
+                <input id="@checkboxId" type="checkbox" @onchange="eventArgs => store.Mutation_UpdateIsComplete(todo.Id, (bool?)eventArgs?.Value)" checked="@todo.IsComplete">
             </td>
-            <td><button type="button" @onclick="() => DeleteTodo(todo.Id)" class="btn btn-danger">Delete</button></td>
+            <td><button type="button" @onclick="() => store.Mutation_Delete(todo.Id)" class="btn btn-danger">Delete</button></td>
             </tr>
         }
         </tbody>    
@@ -54,60 +51,60 @@
     }
 </style>
 
+@using System.ComponentModel.DataAnnotations;
+@implements IDisposable;
+@implements IObserver<TodoItemStore>;
+@inject TodoItemStore store;
+@page "/"
 @code
 {
-    string todoTitle = "a";
-    DateOnly dateDue = DateOnly.FromDateTime(DateTime.Today);
+    EditForm? editForm;
+    TodoViewModel viewModel = new TodoViewModel();
 
-    void UpdateComplete(int id, bool? value)
+    public class TodoViewModel
     {
-        var itemToUpdate = state.todoItems.FirstOrDefault(item => item.Id == id);
-        if(itemToUpdate != null)
+        [Required(ErrorMessage = "Title is required")]
+        public string Title { get; set; } = string.Empty;
+
+        public DateOnly? DueBy { get; set; }
+    }
+
+    public void ValidateAndAdd()
+    {
+        var isValid = editForm?.EditContext?.Validate();
+
+        if ((isValid ?? false))
         {
-            state.todoItems.Remove(itemToUpdate);
-            var updatedItem = itemToUpdate with { IsComplete = value ?? false };
-            state.todoItems.Add(updatedItem);
+            store.Mutation_Create(viewModel.Title, viewModel.DueBy == default ? null : viewModel.DueBy);
+            viewModel.Title = string.Empty;
         }
-        state.todoItems.Sort((a, b) => a.Id.CompareTo(b.Id));
-    }
-    void DeleteTodo(int id) {
-        var itemToDelete = state.todoItems.FirstOrDefault(item => item.Id == id);
-        if(itemToDelete != null)
-            state.todoItems.Remove(itemToDelete);
-        StateHasChanged();
-    }
-    void AddNewTodo() {
-        
-        var maxId = state.todoItems.Count == 0 ? 0 : state.todoItems.Max(item => item.Id);
-        var newItem = new TodoItem(maxId + 1, todoTitle, dateDue == default? null : dateDue);
-        state.todoItems.Add(newItem);
-        StateHasChanged();
     }
 
     protected override async Task OnInitializedAsync()
     {
-        if (!state.Initialized)
-        {
-            try
-            {
-                var local_backend_url = config["local_backend_url"];
+        store.Subscribe(this);
+        await store.Action_Reload();
+    }
 
-                var url = string.IsNullOrEmpty(local_backend_url)
-                ? "/backend/todos"
-                : $"{local_backend_url}/todos";
+    public void Dispose()
+    {
+        store.Unsubscribe(this);
+    }
 
-                var result = await http.GetFromJsonAsync<List<TodoItem>>(url);
-                if (result != null)
-                {
-                    state.todoItems = result;
-                    state.Initialized = true;
-                    StateHasChanged();
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-        }
+    public void OnCompleted()
+    {
+        // Implement the OnCompleted() method here.
+        Console.WriteLine("Completed");
+    }
+
+    public void OnError(Exception error)
+    {
+        // Implement the OnError(Exception) method here.
+        Console.WriteLine("Error");
+    }
+
+    public void OnNext(TodoItemStore value)
+    {
+        StateHasChanged();
     }
 }
