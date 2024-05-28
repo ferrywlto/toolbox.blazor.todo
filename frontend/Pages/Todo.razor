@@ -19,7 +19,7 @@
     <span>Id: @todo.Id</span>&nbsp;<span>Title: @todo.Title</span>&nbsp;
     @if(todo.DueBy != null) {<span>Due By: @todo.DueBy</span>}&nbsp;
     <span>Complete: @todo.IsComplete</span>&nbsp;
-    <input id="@checkboxId" type="checkbox" @onchange="eventArgs => UpdateComplete(todo.Id, (bool?)eventArgs?.Value)">
+    <input id="@checkboxId" type="checkbox" @onchange="eventArgs => UpdateComplete(todo.Id, (bool?)eventArgs?.Value)" checked="@todo.IsComplete">
     <button type="button" @onclick="() => DeleteTodo(todo.Id)">Delete</button>
     </p>
 }
@@ -38,6 +38,7 @@
             var updatedItem = itemToUpdate with { IsComplete = value ?? false };
             state.todoItems.Add(updatedItem);
         }
+        state.todoItems.Sort((a, b) => a.Id.CompareTo(b.Id));
     }
     void DeleteTodo(int id) {
         var itemToDelete = state.todoItems.FirstOrDefault(item => item.Id == id);
