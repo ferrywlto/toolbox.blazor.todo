@@ -1,11 +1,11 @@
 <div>
-    <EditForm Model="viewModel" @ref="editForm">
+    <EditForm Model="vm" @ref="editForm">
         <DataAnnotationsValidator />
         <ValidationSummary />
         <label for="txtTitle">Title:</label>
-        <input id="txtTitle" type="text" @bind-value="viewModel.Title" @bind-value:event="oninput" />
+        <input id="txtTitle" type="text" @bind-value="vm.Title" @bind-value:event="oninput" />
         <label for="dateDue">Due By:</label>
-        <input id="dateDue" type="date" @bind-value="viewModel.DueBy" />
+        <input id="dateDue" type="date" @bind-value="vm.DueBy" />
         <button type="button" @onclick="ValidateAndAdd" class="btn btn-primary">Add</button>
     </EditForm>
 </div>
@@ -22,7 +22,7 @@
             </tr>
         </thead>
         <tbody>
-        @foreach (var todo in store.GetAll())
+        @foreach (var todo in GetAllTodo())
         {
             var checkboxId = $"isCompleteItem{todo.Id}";
 
@@ -31,15 +31,14 @@
             <td>@todo.Title</td>
             <td>@if(todo.DueBy != null) {@todo.DueBy} else { <span>N/A</span> } </td>
             <td>
-                <input id="@checkboxId" type="checkbox" @onchange="eventArgs => store.Mutation_UpdateIsComplete(todo.Id, (bool?)eventArgs?.Value)" checked="@todo.IsComplete">
+                <input id="@checkboxId" type="checkbox" @onchange="eventArgs => HandleUpdateIsComplete(todo.Id, eventArgs)" checked="@todo.IsComplete">
             </td>
-            <td><button type="button" @onclick="() => store.Mutation_Delete(todo.Id)" class="btn btn-danger">Delete</button></td>
+            <td><button type="button" @onclick="() => HandleDelete(todo.Id)" class="btn btn-danger">Delete</button></td>
             </tr>
         }
         </tbody>    
     </table>
 </div>
-
 <style>
     .table-class {
         border-collapse: collapse;
@@ -53,57 +52,55 @@
 
 @using System.ComponentModel.DataAnnotations;
 @implements IDisposable;
-@implements IObserver<TodoItemStore>;
+@implements IObserver<List<TodoItem>>;
 @inject TodoItemStore store;
 @page "/"
 @code
 {
-    EditForm? editForm;
-    TodoViewModel viewModel = new TodoViewModel();
-
-    public class TodoViewModel
+    class ViewModel
     {
         [Required(ErrorMessage = "Title is required")]
         public string Title { get; set; } = string.Empty;
-
         public DateOnly? DueBy { get; set; }
     }
+    ViewModel vm = new();
+    EditForm? editForm;
 
-    public void ValidateAndAdd()
+    void ValidateAndAdd()
     {
         var isValid = editForm?.EditContext?.Validate();
 
         if ((isValid ?? false))
         {
-            store.Mutation_Create(viewModel.Title, viewModel.DueBy == default ? null : viewModel.DueBy);
-            viewModel.Title = string.Empty;
+            store.Create(vm.Title, vm.DueBy == default ? null : vm.DueBy);
+            vm.Title = string.Empty;
         }
     }
-
+    void HandleDelete(int id) => store.Delete(id);
+    void HandleUpdateIsComplete(int id, ChangeEventArgs? eventArgs) 
+    {
+        bool isComplete = (bool) (eventArgs?.Value ?? false);
+        store.UpdateIsComplete(id, isComplete);
+    }
+    List<TodoItem> GetAllTodo() => store.GetAll();
     protected override async Task OnInitializedAsync()
     {
         store.Subscribe(this);
-        await store.Action_Reload();
+        await store.ReloadAll();
     }
-
     public void Dispose()
     {
         store.Unsubscribe(this);
     }
-
     public void OnCompleted()
     {
-        // Implement the OnCompleted() method here.
         Console.WriteLine("Completed");
     }
-
     public void OnError(Exception error)
     {
-        // Implement the OnError(Exception) method here.
-        Console.WriteLine("Error");
+        Console.WriteLine(error);
     }
-
-    public void OnNext(TodoItemStore value)
+    public void OnNext(List<TodoItem> value)
     {
         StateHasChanged();
     }

@@ -1,7 +1,7 @@
-public class TodoItemStore : ApplicationStateStore<TodoItemStore>
+public class TodoItemStore : ObservableStateStore<List<TodoItem>>
 {
+    protected override List<TodoItem> State { get; set; } = [];
     protected bool Initialized = false;
-    protected List<TodoItem> items = [];
     private readonly BackendAPIGateway backendAPIGateway;
     
     public TodoItemStore(BackendAPIGateway backendAPIGateway)
@@ -9,56 +9,41 @@ public class TodoItemStore : ApplicationStateStore<TodoItemStore>
         this.backendAPIGateway = backendAPIGateway;
     }
 
-    public List<TodoItem> GetAll()
-    {
-        return items;
-    }
-    
-    public void Mutation_UpdateIsComplete(int id, bool? isComplete)
-    {
-        var itemToUpdate = items.FirstOrDefault(item => item.Id == id);
-        if (itemToUpdate != null)
-        {
-            items.Remove(itemToUpdate);
-            var updatedItem = itemToUpdate with { IsComplete = isComplete ?? false };
-            items.Add(updatedItem);
-        }
-        items.Sort((a, b) => a.Id.CompareTo(b.Id));
-        StateHasChanged();
-    }
-    public void Mutation_Delete(int id)
-    {
-        var itemToDelete = items.FirstOrDefault(item => item.Id == id);
-        if (itemToDelete != null)
-            items.Remove(itemToDelete);
-        StateHasChanged();
-    }
-    public void Mutation_Create(string Title, DateOnly? DueDate)
-    {
-        var maxId = items.Count == 0 ? 0 : items.Max(item => item.Id);
-        var newItem = new TodoItem(maxId + 1, Title, DueDate == default ? null : DueDate);
-        items.Add(newItem);
-        StateHasChanged();
-    }
-    public void Mutation_ReplaceAll(List<TodoItem> newItems)
-    {
-        items = newItems;
-        StateHasChanged();
-    }
-
-    public async Task Action_Reload(bool forceReload = false)
+    public List<TodoItem> GetAll() => State;
+    public async Task ReloadAll(bool forceReload = false)
     {
         if (!Initialized || forceReload)
         {
-            items = await backendAPIGateway.GetTodoItems();
-            Mutation_ReplaceAll(items);
+            var todoItems = await backendAPIGateway.GetTodoItems();
+            State = todoItems;
             Initialized = true;
+            StateHasChanged();
         }
     }
-    
-    public override void Dispose()
+    public void UpdateIsComplete(int id, bool isComplete)
     {
-        observers.Clear();
-        items.Clear();
+        var itemToUpdate = State.FirstOrDefault(item => item.Id == id);
+        if (itemToUpdate != null)
+        {
+            State.Remove(itemToUpdate);
+            var updatedItem = itemToUpdate with { IsComplete = isComplete };
+            State.Add(updatedItem);
+        }
+        State.Sort((a, b) => a.Id.CompareTo(b.Id));
+        StateHasChanged();
+    }
+    public void Delete(int id)
+    {
+        var itemToDelete = State.FirstOrDefault(item => item.Id == id);
+        if (itemToDelete != null)
+            State.Remove(itemToDelete);
+        StateHasChanged();
+    }
+    public void Create(string Title, DateOnly? DueDate)
+    {
+        var maxId = State.Max(todo => todo.Id);
+        var newItem = new TodoItem(maxId + 1, Title, DueDate == default ? null : DueDate);
+        State.Add(newItem);
+        StateHasChanged();
     }
 }
